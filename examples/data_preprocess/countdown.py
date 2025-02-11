@@ -4,13 +4,13 @@ Preprocess dataset for countdown task - given a target number and N numbers, gen
 
 import re
 import os
-from datasets import Dataset, load_dataset
+# from datasets import Dataset, load_dataset
+from modelscope.msdatasets import MsDataset
 from random import randint, seed, choice
 from typing import List, Tuple
 from tqdm import tqdm
 from verl.utils.hdfs_io import copy, makedirs
 import argparse
-
 
 def gen_dataset(
     num_samples: int,
@@ -22,7 +22,7 @@ def gen_dataset(
     seed_value: int = 42,
 ) -> List[Tuple]:
     """Generate dataset for countdown task.
-    
+
     Args:
         num_samples: Number of samples to generate
         num_operands: Number of numbers provided in each sample
@@ -31,23 +31,23 @@ def gen_dataset(
         max_number: Maximum value for provided numbers
         operations: List of allowed operations
         seed_value: Random seed for reproducibility
-        
+
     Returns:
         List of tuples containing (target, numbers, solution)
     """
     seed(seed_value)
     samples = []
-    
+
     for _ in tqdm(range(num_samples)):
         # Generate random target
         target = randint(1, max_target)
-        
+
         # Generate random numbers
         numbers = [randint(min_number, max_number) for _ in range(num_operands)]
-        
-        
+
+
         samples.append((target, numbers))
-    
+
     return samples
 
 def make_prefix(dp, template_type):
@@ -85,7 +85,8 @@ if __name__ == '__main__':
     TRAIN_SIZE = args.train_size
     TEST_SIZE = args.test_size
 
-    raw_dataset = load_dataset('Jiayi-Pan/Countdown-Tasks-3to4', split='train')
+    # raw_dataset = load_dataset('Jiayi-Pan/Countdown-Tasks-3to4', split='train')
+    raw_dataset = MsDataset.load('zouxuhong/Countdown-Tasks-3to4', subset_name='default', split='train')
 
     assert len(raw_dataset) > TRAIN_SIZE + TEST_SIZE
     train_dataset = raw_dataset.select(range(TRAIN_SIZE))
@@ -116,7 +117,7 @@ if __name__ == '__main__':
             }
             return data
         return process_fn
-    
+
     train_dataset = train_dataset.map(function=make_map_fn('train'), with_indices=True)
     test_dataset = test_dataset.map(function=make_map_fn('test'), with_indices=True)
 
@@ -128,4 +129,4 @@ if __name__ == '__main__':
 
     if hdfs_dir is not None:
         makedirs(hdfs_dir)
-        copy(src=local_dir, dst=hdfs_dir) 
+        copy(src=local_dir, dst=hdfs_dir)
